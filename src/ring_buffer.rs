@@ -34,8 +34,6 @@ impl<T: Copy + Default> RingBuffer<T> {
         self.buffer[(self.tail + offset) % self.capacity()]
     }
 
-
-////////////////////////////////////////////////
     // `get_all` reads all values without advancing the indices.
     pub fn get_all(&self) -> Vec<T> {
         let mut result = Vec::with_capacity(self.len());
@@ -44,6 +42,7 @@ impl<T: Copy + Default> RingBuffer<T> {
         }
         result
     }
+    
     // `push` and `pop` write/read and advance the indices.
     pub fn push(&mut self, value: T) {
         // if the buffer is empty, we need to set the read index to the write index
@@ -55,8 +54,6 @@ impl<T: Copy + Default> RingBuffer<T> {
         self.buffer[self.head] = value;
         self.head = (self.head + 1) % self.capacity();
     }
-////////////////////////////////////////////////
-
 
     pub fn pop(&mut self) -> T {
         let value = self.buffer[self.tail];
