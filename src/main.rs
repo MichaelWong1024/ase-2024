@@ -5,7 +5,12 @@ use std::path::Path;
 mod lfo;
 mod ring_buffer;
 mod vibrato;
+<<<<<<< HEAD
 use vibrato::Vibrato;
+||||||| cd9c504
+=======
+mod lfo;
+>>>>>>> 67096c1ba777e4c0c55b3b90f3768db845c495c0
 
 fn show_info() {
     eprintln!("MUSI-6106 Assignment Executable");
