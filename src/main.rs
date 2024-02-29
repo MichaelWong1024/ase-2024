@@ -1,7 +1,11 @@
-use std::{fs::File, io::Write};
+use hound::{WavReader, WavWriter};
+use std::env;
+use std::path::Path;
 
+mod lfo;
 mod ring_buffer;
 mod vibrato;
+use vibrato::Vibrato;
 
 fn show_info() {
     eprintln!("MUSI-6106 Assignment Executable");
@@ -9,24 +13,64 @@ fn show_info() {
 }
 
 fn main() {
-   show_info();
+    show_info();
 
-    // Parse command line arguments
-    let args: Vec<String> = std::env::args().collect();
+    // Parse command line arguments more efficiently
+    let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
-        eprintln!("Usage: {} <input wave filename> <output text filename>", args[0]);
-        return
+        eprintln!("Usage: {} <input wave filename> <output wave filename>", args[0]);
+        return;
     }
 
-    // Open the input wave file
-    let mut reader = hound::WavReader::open(&args[1]).unwrap();
+    // Simplify path handling
+    let input_path = &args[1];
+    let output_path = &args[2];
+
+    // Open input WAV file and initialize reader
+    let mut reader = WavReader::open(input_path).expect("Failed to open input WAV file");
     let spec = reader.spec();
-    let channels = spec.channels;
+    let num_channels = spec.channels as usize;
+    let sample_rate = spec.sample_rate as f32;
 
-    // Read audio data and write it to the output text file (one column per channel)
-    let mut out = File::create(&args[2]).expect("Unable to create file");
-    for (i, sample) in reader.samples::<i16>().enumerate() {
-        let sample = sample.unwrap() as f32 / (1 << 15) as f32;
-        write!(out, "{}{}", sample, if i % channels as usize == (channels - 1).into() { "\n" } else { " " }).unwrap();
+    // Constants for Vibrato effect
+    const DELAY: f32 = 0.1;
+    const WIDTH: f32 = 0.1;
+    const MOD_FREQ: f32 = 5.0;
+
+    // Initialize the Vibrato filter
+    let mut vibrato_filter = Vibrato::new(sample_rate, DELAY, WIDTH, MOD_FREQ, num_channels)
+        .expect("Failed to create VibratoFilter");
+
+    // Prepare the output WAV file
+    let mut writer = WavWriter::create(output_path, spec).expect("Failed to create WAV file");
+
+    // Improved sample processing
+    let samples: Vec<i16> = reader.samples::<i16>().map(Result::unwrap).collect();
+    let num_samples = samples.len() / num_channels;
+
+    // Organize samples by channel and convert to f32
+    let mut channel_samples: Vec<Vec<f32>> = vec![Vec::with_capacity(num_samples); num_channels];
+    samples.iter().enumerate().for_each(|(i, &sample)| {
+        let channel = i % num_channels;
+        channel_samples[channel].push(sample as f32 / i16::MAX as f32);
+    });
+
+    // Prepare output samples container
+    let mut processed_samples: Vec<Vec<f32>> = vec![vec![0.0; num_samples]; num_channels];
+
+    // Process samples through the Vibrato filter
+    vibrato_filter.process(
+        &channel_samples.iter().map(|v| v.as_slice()).collect::<Vec<&[f32]>>(),
+        &mut processed_samples.iter_mut().map(|v| v.as_mut_slice()).collect::<Vec<&mut [f32]>>(),
+    );
+
+    // Interleave and write processed samples back to the WAV file
+    for i in 0..num_samples {
+        for channel in 0..num_channels {
+            let sample = (processed_samples[channel][i] * i16::MAX as f32).round() as i16;
+            writer.write_sample(sample).expect("Failed to write sample");
+        }
     }
+
+    writer.finalize().expect("Failed to finalize WAV file");
 }

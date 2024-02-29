@@ -1,3 +1,5 @@
+#[derive(Clone)]
+
 pub struct RingBuffer<T> {
     buffer: Vec<T>,
     head: usize,
@@ -32,11 +34,29 @@ impl<T: Copy + Default> RingBuffer<T> {
         self.buffer[(self.tail + offset) % self.capacity()]
     }
 
+
+////////////////////////////////////////////////
+    // `get_all` reads all values without advancing the indices.
+    pub fn get_all(&self) -> Vec<T> {
+        let mut result = Vec::with_capacity(self.len());
+        for i in 0..self.len() {
+            result.push(self.get(i));
+        }
+        result
+    }
     // `push` and `pop` write/read and advance the indices.
     pub fn push(&mut self, value: T) {
+        // if the buffer is empty, we need to set the read index to the write index
+        if self.buffer.len() == 0 {
+            self.buffer.push(value);
+            return;
+        }
+        // if the buffer is full, we need to overwrite the oldest value
         self.buffer[self.head] = value;
         self.head = (self.head + 1) % self.capacity();
     }
+////////////////////////////////////////////////
+
 
     pub fn pop(&mut self) -> T {
         let value = self.buffer[self.tail];
@@ -79,7 +99,7 @@ impl RingBuffer<f32> {
     // Return the value at at an offset from the current read index.
     // To handle fractional offsets, linearly interpolate between adjacent values. 
     pub fn get_frac(&self, offset: f32) -> f32 {
-        todo!("implement")
+        self.get(offset.floor() as usize) * (1.0 - offset.fract()) + self.get(offset.ceil() as usize) * offset.fract()
     }
 }
 
@@ -195,5 +215,29 @@ mod tests {
         assert_eq!(ring_buffer.get_read_index(), 3);
 
         // NOTE: Negative indices are also weird, but we can't even pass them due to type checking!
+    }
+
+    #[test]
+    fn test_linear_interpolation() {
+        let capacity = 10; // Adjust capacity to match your scenario
+        let mut buffer = RingBuffer::new(capacity);
+
+        // Populate the buffer with sequential values
+        for i in 0..capacity {
+            buffer.push(i as f32); // Assuming 'push' method correctly updates head and tail
+        }
+
+        // Tests for fractional interpolation
+        assert_eq!(buffer.get_frac(0.5), 0.5, "Interpolation at index 0.5 failed");
+        assert_eq!(buffer.get_frac(1.5), 1.5, "Interpolation at index 1.5 failed");
+        assert_eq!(buffer.get_frac(2.25), 2.25, "Interpolation at index 2.25 failed");
+        assert_eq!(buffer.get_frac(7.75), 7.75, "Interpolation at index 7.75 failed");
+
+        // Tests for edge cases
+        assert_eq!(buffer.get_frac(0.0), 0.0, "Interpolation at index 0.0 failed");
+        assert_eq!(buffer.get_frac(9.0), 9.0, "Interpolation at the last index failed");
+
+        // Test beyond the current buffer limit to ensure wrapping
+        assert_eq!(buffer.get_frac(10.5), 0.5, "Interpolation with wrapping at index 10.5 failed");
     }
 }
