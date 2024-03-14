@@ -1,12 +1,34 @@
 <<<<<<< HEAD
+
+//! # Vibrato Effect Processor
+//!
+//! Provides a vibrato effect processor designed for real-time audio signal processing. 
+//! The `Vibrato` struct modulates the pitch of audio input signals, creating a vibrato effect 
+//! by leveraging a low-frequency oscillator (LFO) and delay buffers for each channel of audio input.
 use crate::lfo::LFO;
 use crate::ring_buffer::RingBuffer;
 
-#[derive(Debug, Clone)]
+/// Errors that can occur within the vibrato effect processing.
+///
+/// These errors are returned when attempting to create a new `Vibrato` instance or update its parameters
+/// with values that are outside of the acceptable range or logically incorrect.
+/// #[derive(Debug, Clone)]
 pub enum Error {
+    /// Error due to an invalid parameter value.
+    ///
+    /// Indicates that a parameter was provided with a value that is not supported by the vibrato processor,
+    /// either because it is out of the acceptable range or because it fails to meet a specific precondition.
+    ///
+    /// - `name`: A descriptive name of the parameter that received the invalid value.
+    /// - `value`: The actual invalid value that was provided.
     InvalidValue { name: String, value: f32 },
 }
 
+/// The `Vibrato` struct applies a vibrato effect to an audio signal.
+///
+/// It uses a low-frequency oscillator (LFO) to modulate the delay time of the signal,
+/// producing variations in pitch that result in the vibrato effect. The modulation and its intensity
+/// can be customized through parameters such as modulation frequency and modulation depth.
 pub struct Vibrato {
     sample_rate: f32,
     delay_time: f32,
@@ -18,6 +40,23 @@ pub struct Vibrato {
 }
 
 impl Vibrato {
+    /// Creates a new instance of the `Vibrato` effect processor.
+    ///
+    /// Validates the provided parameters and initializes the internal state, including
+    /// the delay buffers and the LFO with the specified settings.
+    ///
+    /// # Parameters
+    ///
+    /// - `sample_rate`: The sample rate of the audio in Hz. Must be positive.
+    /// - `delay_time`: The base delay time in seconds. Must be within the capacity of the delay buffers.
+    /// - `width_time`: The width of the vibrato modulation in seconds. Cannot exceed the `delay_time`.
+    /// - `modulation_frequency`: The frequency of the vibrato effect in Hz. Must be positive.
+    /// - `channels`: The number of audio channels to process. Must be a positive integer.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Self)`: A new `Vibrato` instance configured with the specified parameters.
+    /// - `Err(Error)`: An error if any parameter is invalid, detailing the nature of the invalid parameter.
     pub fn new(
         sample_rate: f32,
         delay_time: f32,
@@ -61,10 +100,29 @@ impl Vibrato {
         })
     }
 
+    /// Resets the internal delay buffers of the vibrato effect processor to their initial state.
+    ///
+    /// This method is useful for clearing the effect's internal state before processing a new audio stream
+    /// or when wishing to reset the effect's state at any point during its use.
     pub fn reset(&mut self) {
         self.delay_buffers.iter_mut().for_each(RingBuffer::reset);
     }
 
+    /// Updates the parameters of the vibrato effect processor.
+    ///
+    /// Allows dynamic adjustment of the vibrato's delay time, modulation width, and modulation frequency.
+    /// Validates the new parameters before applying them to ensure they are within acceptable ranges.
+    ///
+    /// # Parameters
+    ///
+    /// - `delay_time`: The new base delay time in seconds.
+    /// - `width_time`: The new modulation width in seconds.
+    /// - `modulation_frequency`: The new frequency of the modulation in Hz.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(())`: If the parameters are successfully updated.
+    /// - `Err(Error)`: If any parameter is invalid, with details about the issue.
     pub fn set_param(
         &mut self,
         delay_time: f32,
@@ -96,10 +154,33 @@ impl Vibrato {
         Ok(())
     }
 
+    /// Retrieves the current parameters of the vibrato effect processor.
+    ///
+    /// Useful for inspecting the current configuration of the vibrato effect, 
+    /// including its base delay time, modulation width, and modulation frequency.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing the current delay time, width time, and modulation frequency parameters.
     pub fn get_param(&self) -> (f32, f32, f32) {
         (self.delay_time, self.width_time, self.modulation_frequency)
     }
 
+    /// Processes the input audio buffers and applies the vibrato effect.
+    ///
+    /// This method modulates the pitch of each audio channel according to the vibrato's current settings,
+    /// writing the processed audio to the output buffers.
+    ///
+    /// # Parameters
+    ///
+    /// - `input`: A slice of references to input audio buffers, one per channel.
+    /// - `output`: A slice of mutable references to output audio buffers, one per channel,
+    ///             where the processed audio will be stored.
+    ///
+    /// # Panics
+    ///
+    /// May panic if the `input` and `output` slices are not of equal length or if the length of any
+    /// output buffer does not match the corresponding input buffer.
     pub fn process(&mut self, input: &[&[f32]], output: &mut [&mut [f32]]) {
         for (channel_idx, &channel_input) in input.iter().enumerate() {
             let delay_buffer = &mut self.delay_buffers[channel_idx];
@@ -114,6 +195,19 @@ impl Vibrato {
         }
     }
 
+    /// Calculates the required capacity for the delay buffers based on the delay and width parameters.
+    ///
+    /// Ensures that there is sufficient space in the delay buffers to accommodate the base delay time
+    /// and the maximum modulation depth induced by the vibrato effect.
+    ///
+    /// # Parameters
+    ///
+    /// - `delay_samples`: The number of samples corresponding to the base delay time.
+    /// - `width_samples`: The number of samples corresponding to the maximum modulation width.
+    ///
+    /// # Returns
+    ///
+    /// The calculated capacity for the delay buffers, ensuring adequate space for modulation.
     fn calculate_capacity(delay_samples: usize, width_samples: usize) -> usize {
         1 + delay_samples + width_samples * 2
     }
@@ -125,9 +219,20 @@ impl Vibrato {
 
 #[cfg(test)]
 mod tests {
+    //! Unit tests for the `Vibrato` audio effect processor.
+    //!
+    //! These tests validate the correct initialization, parameter modification,
+    //! signal processing, and reset functionality of the `Vibrato` struct, ensuring
+    //! reliability and correctness across its main use cases.
     use super::*;
     use crate::ring_buffer::RingBuffer;
 
+    /// Validates successful creation and initialization of a `Vibrato` instance with given parameters.
+    /// 
+    /// Ensures that the `Vibrato::new` function correctly initializes the struct's fields with the provided
+    /// arguments and that the internal structures such as delay buffers and LFO are set up properly.
+    /// The test confirms that no error is returned and that all specified parameters are accurately reflected
+    /// in the `Vibrato` instance's state.
     #[test]
     fn test_Vibrato_new() {
         let sample_rate = 44100.0;
@@ -149,6 +254,11 @@ mod tests {
         }
     }
 
+    /// Tests the functionality of updating `Vibrato`'s parameters using `set_param`.
+    ///
+    /// This test ensures that after changing the vibrato's parameters, the updated values are
+    /// accurately reflected. It verifies the method's ability to correctly update and maintain the integrity
+    /// of the `Vibrato`'s state, including recalculations necessary for the internal processing logic.
     #[test]
     fn test_set_param() {
         let sample_rate_hz = 44100.0;
@@ -172,6 +282,12 @@ mod tests {
         assert_eq!(mod_freq_hz_check_1 * 2.0, mod_freq_hz_check_2);
     }
     
+    /// Checks the `reset` method's ability to revert `Vibrato`'s internal state to initial conditions.
+    ///
+    /// By processing a signal and then resetting, this test verifies that the `reset` method effectively
+    /// clears any internal state, ensuring the `Vibrato` is ready for fresh processing without remnants of
+    /// previous data affecting the output. It demonstrates the reset functionality's critical role in reusing
+    /// the effect processor for multiple audio streams.
     #[test]
     fn test_reset() {
         let sample_rate = 44100.0;
@@ -194,7 +310,11 @@ mod tests {
         assert_eq!(output[0], 0.0, "Output should be reset to 0.0 after calling reset");
     }
     
-
+    /// Evaluates the vibrato effect's handling of delay and minimal modulation.
+    ///
+    /// This test specifically looks at how the `Vibrato` applies an initial delay and minimal modulation to an input signal,
+    /// assessing the effect processor's ability to handle subtle modulations. It's crucial for validating that the vibrato
+    /// effect can be finely tuned for subtle audio enhancements.
     #[test]
     fn output_reflects_delay_effect_with_minimal_modulation() {
         let sample_rate = 44100.0;
@@ -219,6 +339,11 @@ mod tests {
         // Further detailed assertions should be added to verify the delay and modulation effects more precisely.
     }
     
+    /// Tests the `Vibrato` effect's response to a constant (DC) input signal.
+    ///
+    /// Verifies that a constant input yields a consistent output after an initial transient period, reflecting the
+    /// processor's ability to maintain steady-state conditions. This test is significant for understanding how
+    /// `Vibrato` interacts with sustained tones or notes, which are common in musical applications.
     #[test]
     fn dc_input_results_in_dc_output() {
         let sample_rate_hz = 44100.0;
@@ -259,6 +384,11 @@ mod tests {
         }
     }
 
+    /// Validates the `Vibrato` effect's processing across different input block sizes.
+    ///
+    /// By testing with various input lengths, this test ensures that the `Vibrato` can handle audio buffers of
+    /// different sizes without compromising the consistency or quality of the vibrato effect. It highlights the
+    /// processor's flexibility and reliability in a real-world usage scenario where buffer sizes can vary.
     #[test]
     fn test_varying_input_block_sizes() {
         let sample_rate = 44100.0;
@@ -292,6 +422,11 @@ mod tests {
     }
     
 
+    /// Confirms that processing a zero input signal yields a zero output signal.
+    ///
+    /// This test verifies the `Vibrato`'s correctness in situations where the input signal is silent, ensuring
+    /// that the processor does not introduce any unintended noise or artifacts. It's essential for evaluating the
+    /// processor's noise floor and ensuring transparency in audio processing.
     #[test]
     fn test_zero_input_signal() {
         // Improved variable names for clarity
@@ -322,6 +457,11 @@ mod tests {
         }
     }
     
+    /// Assesses the application of the vibrato effect through the `process` method.
+    ///
+    /// Focused on evaluating the effect's audible impact, this test checks if the `process` method modifies an input
+    /// signal in a manner consistent with the expected vibrato effect. It underscores the `Vibrato`'s primary functionality,
+    /// ensuring the processor not only alters the audio signal as intended but also adheres to the specified modulation parameters.
     #[test]
     fn test_process_applies_vibrato_effect() {
         // Given: A Vibrato instance with known parameters
