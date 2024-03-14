@@ -181,8 +181,7 @@ mod tests {
         let channels = 1;
     
         // Simplify the creation and unwrap operation with expect to provide more context on failure
-        let mut vibrato = Vibrato::new(sample_rate, delay, width, mod_freq, channels)
-            .expect("Failed to create Vibrato");
+        let mut vibrato = Vibrato::new(sample_rate, delay, width, mod_freq, channels).expect("Create Vibrato failed");
     
         // Directly create slices instead of converting through Vec
         let mut input = [1.0; 44100];
@@ -204,8 +203,7 @@ mod tests {
         let modulation_frequency = 0.001; // Minimal modulation
         let channels = 1;
 
-        let mut filter = Vibrato::new(sample_rate, delay_time, width_time, modulation_frequency, channels)
-                            .expect("Failed to create Vibrato");
+        let mut filter = Vibrato::new(sample_rate, delay_time, width_time, modulation_frequency, channels).expect("Create Vibrato failed");
 
         let input_signal = vec![vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0]]; // Extended input
         let mut output_signal = vec![vec![0.0; 15]]; // Extended output buffer
@@ -268,14 +266,7 @@ mod tests {
         let width_seconds = 0.005;
         let modulation_frequency = 5.0;
         let channels = 1;
-        let mut vibrato_effect = Vibrato::new(
-            sample_rate,
-            delay_seconds,
-            width_seconds,
-            modulation_frequency,
-            channels,
-        )
-        .expect("Failed to create Vibrato");
+        let mut vibrato_effect = Vibrato::new(sample_rate,delay_seconds,width_seconds,modulation_frequency,channels,).expect("Create Vibrato failed");
     
         // Testing with various input sizes
         for &input_size in &[100, 500, 1000] {
@@ -311,13 +302,7 @@ mod tests {
         const NUM_CHANNELS: usize = 1; // Use a constant for fixed values like number of channels
         
         // Initialize the vibrato filter with clearer variable names
-        let mut vibrato_filter = Vibrato::new(
-            sample_rate,
-            delay_time,
-            modulation_width,
-            modulation_frequency,
-            NUM_CHANNELS,
-        ).expect("Failed to create Vibrato instance");
+        let mut vibrato_filter = Vibrato::new(sample_rate,delay_time,modulation_width,modulation_frequency,NUM_CHANNELS,).expect("Create Vibrato instance failed");
     
         // Use the constant for dimensions
         const INPUT_LENGTH: usize = 441;
@@ -345,8 +330,7 @@ mod tests {
         let width_secs = 0.003; // 3ms width
         let mod_freq_hz = 5.0; // 5Hz modulation frequency
         let num_channels = 1; // Mono signal for simplicity
-        let mut Vibrato = Vibrato::new(sample_rate_hz, max_delay_secs, width_secs, mod_freq_hz, num_channels)
-            .expect("Failed to create Vibrato");
+        let mut Vibrato = Vibrato::new(sample_rate_hz, max_delay_secs, width_secs, mod_freq_hz, num_channels).expect("Create Vibrato failed");
 
         // And: A mock input signal (simplified for the test)
         let input_signal = vec![1.0, 0.0, -1.0, 0.0]; // A simple square wave
@@ -631,7 +615,7 @@ mod tests {
         let num_channels = 1; // Testing with a single channel for simplicity
 
         // Assuming Vibrato::new is the constructor for the Vibrato effect
-        let mut vibrato = Vibrato::new(sample_rate_hz, max_delay_secs, width_secs, mod_freq_hz, num_channels).expect("Failed to create Vibrato");
+        let mut vibrato = Vibrato::new(sample_rate_hz, max_delay_secs, width_secs, mod_freq_hz, num_channels).expect("Create Vibrato failed");
 
         let input_len = 441; // Length of the input signal
         let dc_value = 0.5; // DC value for the input
@@ -658,8 +642,7 @@ mod tests {
         let num_channels = 1; // Single channel for simplicity
 
         // Initialize the Vibrato effect
-        let mut vibrato = Vibrato::new(sample_rate_hz, max_delay_secs, width_secs, mod_freq_hz, num_channels)
-            .expect("Failed to create Vibrato");
+        let mut vibrato = Vibrato::new(sample_rate_hz, max_delay_secs, width_secs, mod_freq_hz, num_channels).expect("Create Vibrato failed");
 
         // Test a range of input block sizes
         for &block_size in &[32, 64, 128, 256, 512, 1024, 2048] {
@@ -691,8 +674,7 @@ mod tests {
         let num_channels = 1; // Testing with a single channel for simplicity
 
         // Initialize the Vibrato effect
-        let mut vibrato = Vibrato::new(sample_rate_hz, max_delay_secs, width_secs, mod_freq_hz, num_channels)
-            .expect("Failed to create Vibrato");
+        let mut vibrato = Vibrato::new(sample_rate_hz, max_delay_secs, width_secs, mod_freq_hz, num_channels).expect("Create Vibrato failed");
 
         let input_len = 441; // Example length of the input signal
         let zero_input = vec![0.0; input_len]; // Create a zero-input signal
@@ -715,7 +697,7 @@ mod tests {
         let width_secs = 0.003; // 3ms width
         let mod_freq_hz = 5.0; // 5Hz modulation frequency
         let num_channels = 1; // Mono signal for simplicity
-        let mut vibrato = Vibrato::new(sample_rate_hz, max_delay_secs, width_secs, mod_freq_hz, num_channels).expect("Failed to create Vibrato");
+        let mut vibrato = Vibrato::new(sample_rate_hz, max_delay_secs, width_secs, mod_freq_hz, num_channels).expect("Create Vibrato failed");
 
         // And: A mock input signal (simplified for the test)
         let mut input = vec![1.0, 0.0, -1.0, 0.0]; // A simple square wave

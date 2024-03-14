@@ -32,7 +32,7 @@ fn main() {
     let output_path = &args[2];
 
     // Open input WAV file and initialize reader
-    let mut reader = WavReader::open(input_path).expect("Failed to open input WAV file");
+    let mut reader = WavReader::open(input_path).expect("Open input WAV file failed");
     let spec = reader.spec();
     let num_channels = spec.channels as usize;
     let sample_rate = spec.sample_rate as f32;
@@ -44,10 +44,10 @@ fn main() {
 
     // Initialize the Vibrato filter
     let mut vibrato_filter = Vibrato::new(sample_rate, DELAY, WIDTH, MOD_FREQ, num_channels)
-        .expect("Failed to create VibratoFilter");
+        .expect("Create VibratoFilter failed");
 
     // Prepare the output WAV file
-    let mut writer = WavWriter::create(output_path, spec).expect("Failed to create WAV file");
+    let mut writer = WavWriter::create(output_path, spec).expect("Create WAV file failed");
 
     // Improved sample processing
     let samples: Vec<i16> = reader.samples::<i16>().map(Result::unwrap).collect();
@@ -73,9 +73,9 @@ fn main() {
     for i in 0..num_samples {
         for channel in 0..num_channels {
             let sample = (processed_samples[channel][i] * i16::MAX as f32).round() as i16;
-            writer.write_sample(sample).expect("Failed to write sample");
+            writer.write_sample(sample).expect("Write sample failed");
         }
     }
 
-    writer.finalize().expect("Failed to finalize WAV file");
+    writer.finalize().expect("Finalize WAV file failed");
 }
