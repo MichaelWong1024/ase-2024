@@ -5,12 +5,7 @@ use std::path::Path;
 mod lfo;
 mod ring_buffer;
 mod vibrato;
-<<<<<<< HEAD
 use vibrato::Vibrato;
-||||||| cd9c504
-=======
-mod lfo;
->>>>>>> 67096c1ba777e4c0c55b3b90f3768db845c495c0
 
 fn show_info() {
     eprintln!("MUSI-6106 Assignment Executable");
@@ -43,8 +38,7 @@ fn main() {
     const MOD_FREQ: f32 = 5.0;
 
     // Initialize the Vibrato filter
-    let mut vibrato_filter = Vibrato::new(sample_rate, DELAY, WIDTH, MOD_FREQ, num_channels)
-        .expect("Create VibratoFilter failed");
+    let mut vibrato_filter = Vibrato::new(sample_rate, DELAY, WIDTH, MOD_FREQ, num_channels).expect("Create VibratoFilter failed");
 
     // Prepare the output WAV file
     let mut writer = WavWriter::create(output_path, spec).expect("Create WAV file failed");
