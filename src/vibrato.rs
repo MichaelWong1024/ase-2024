@@ -64,7 +64,6 @@ impl Vibrato {
     ) -> Result<Self, Error> {
         let delay = (delay_time * sample_rate).round() as usize;
         let width = (width_time * sample_rate).round() as usize;
-        let capacity = Self::calculate_capacity(delay, width);
 
         if width > delay {
             return Err(Error::InvalidValue {
@@ -80,7 +79,7 @@ impl Vibrato {
         }
 
         let delay_buffers = (0..channels)
-            .map(|_| RingBuffer::<f32>::new(capacity))
+            .map(|_| RingBuffer::<f32>::new(Self::calculate_capacity(delay, width)))
             .collect();
 
         let mut lfo = LFO::new(sample_rate, 1024);
@@ -125,8 +124,7 @@ impl Vibrato {
         &mut self,
         delay_time: f32,
         width_time: f32,
-        modulation_frequency: f32,
-    ) -> Result<(), Error> {
+        modulation_frequency: f32,) -> Result<(), Error> {
         let delay = (delay_time * self.sample_rate).round() as usize;
         let width = (width_time * self.sample_rate).round() as usize;
         let capacity = Self::calculate_capacity(delay, width);
@@ -148,7 +146,6 @@ impl Vibrato {
         self.width_time = width_time;
         self.modulation_frequency = modulation_frequency;
         self.delay_buffers.iter_mut().for_each(|buffer| *buffer = RingBuffer::new(capacity));
-
         Ok(())
     }
 
@@ -180,16 +177,15 @@ impl Vibrato {
     /// May panic if the `input` and `output` slices are not of equal length or if the length of any
     /// output buffer does not match the corresponding input buffer.
     pub fn process(&mut self, input: &[&[f32]], output: &mut [&mut [f32]]) {
-        for (idx, &input) in input.iter().enumerate() {
-            input.iter().enumerate().for_each(|(sample_idx, &sample)| {
-                let depth_mod = self.lfo.next_mod();
-                let delay_whole = self.delay_time * self.sample_rate + depth_mod;
-                self.delay_buffers[idx].push(sample);
-                let delayed_sample = self.delay_buffers[idx].get_frac(delay_whole);
-                output[idx][sample_idx] = delayed_sample;
+        input.iter().enumerate().for_each(|(buffer_index, &input_buffer)| {
+            input_buffer.iter().enumerate().for_each(|(sample_index, &sample)| {
+                self.delay_buffers[buffer_index].push(sample);
+                let delayed_sample = self.delay_buffers[buffer_index].get_frac((self.delay_time * self.sample_rate) + self.lfo.next_mod());
+                output[buffer_index][sample_index] = delayed_sample;
             });
-        }
-    }    
+        });
+    }
+    
 
     /// Calculates the required capacity for the delay buffers based on the delay and width parameters.
     ///

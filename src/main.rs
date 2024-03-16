@@ -38,38 +38,36 @@ fn main() {
     const MOD_FREQ: f32 = 5.0;
 
     // Initialize the Vibrato filter
-    let mut vibrato_filter = Vibrato::new(sample_rate, DELAY, WIDTH, MOD_FREQ, num_channels).expect("Create VibratoFilter failed");
+    let mut v = Vibrato::new(sample_rate, DELAY, WIDTH, MOD_FREQ, num_channels).expect("Create Vibrato failed");
 
     // Prepare the output WAV file
-    let mut writer = WavWriter::create(output_path, spec).expect("Create WAV file failed");
+    let mut output = WavWriter::create(output_path, spec).expect("Create WAV file failed");
 
     // Improved sample processing
     let samples: Vec<i16> = reader.samples::<i16>().map(Result::unwrap).collect();
-    let num_samples = samples.len() / num_channels;
 
     // Organize samples by channel and convert to f32
-    let mut channel_samples: Vec<Vec<f32>> = vec![Vec::with_capacity(num_samples); num_channels];
+    let mut channel_samples: Vec<Vec<f32>> = vec![Vec::with_capacity(samples.len() / num_channels); num_channels];
     samples.iter().enumerate().for_each(|(i, &sample)| {
         let channel = i % num_channels;
         channel_samples[channel].push(sample as f32 / i16::MAX as f32);
     });
 
     // Prepare output samples container
-    let mut processed_samples: Vec<Vec<f32>> = vec![vec![0.0; num_samples]; num_channels];
+    let mut processed_samples: Vec<Vec<f32>> = vec![vec![0.0; samples.len() / num_channels]; num_channels];
 
     // Process samples through the Vibrato filter
-    vibrato_filter.process(
+    v.process(
         &channel_samples.iter().map(|v| v.as_slice()).collect::<Vec<&[f32]>>(),
         &mut processed_samples.iter_mut().map(|v| v.as_mut_slice()).collect::<Vec<&mut [f32]>>(),
     );
 
     // Interleave and write processed samples back to the WAV file
-    for i in 0..num_samples {
+    for i in 0..(samples.len() / num_channels) {
         for channel in 0..num_channels {
-            let sample = (processed_samples[channel][i] * i16::MAX as f32).round() as i16;
-            writer.write_sample(sample).expect("Write sample failed");
+            output.write_sample((processed_samples[channel][i] * i16::MAX as f32).round() as i16).expect("Write sample failed");
         }
     }
 
-    writer.finalize().expect("Finalize WAV file failed");
+    output.finalize().expect("Finalize WAV file failed");
 }
